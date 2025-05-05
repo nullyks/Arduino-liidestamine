@@ -1,27 +1,34 @@
-# Õppevara pealkiri
-Siia õppevara lühikirjeldus
+# Arduino liidstamine teiste seadmetega
+Õppematerjal selgitab, kuidas liidestada Arduino arendusplaati teiste arendusplaatidega ja tarkvarakeskkondadega.
+
+## Õpieesmärgid
+Materjali läbimisel õpid, kuidas vahetada andmeid kahe Arduino arendusplaadi vahel. Samuti saad teada, kuidas liidestada Arduino Arendusplaati personaalarvutis töötava tarkvarakeskkonnaga.
 
 ## Õpiväljundid
 Materjali edukalt läbinud õppija:
-* väljund 1
-* väljund 2
-* väljund 3
+* valib sobiva viisi andmete edastamiseks kahe Arduino arendusplaadi vahel olenevalt edastatavate andmete keerukusest;
+* selgitab, mis on JSON andmevahetusvorming ja kuidas seda kasutada andmete vahetamiseks Arduino arendusplaadi kontektsis;
+* valmistab rakenduse, mis võimaldab üle jadapordi saata ja võtta vastu andmeid personaalarvutist.
 
 ## Hindamisjuhend
 
-Siia õppematerjali juurde käiv hindamisjuhend.
+Selle õppematerjali puhul ei rakendata eristavat hindamist.
+
+Õppija on materjali omandanud kui ta on iseseisvalt võimeline lahendama vähemalt neli iseseisvat üleannet viiest.
 
 ## Vajalikud vahendid
-* vahend 1
-* vahend 2
-* vahend 3
+* 1 x personaalarvuti (sobib nii Windows, Linux kui macOS operatsioonisüsteem)
+* 1 x Arduino UNO arendusplaat koos sobiva USB kaabliga
+* 1 x potentsiomeeter (makettplaadiga ühilduv)
+* 1 x nupp (makettplaadiga ühilduv)
+* 2 x LED (soovitavalt eri värvi)
+* 2 x 100 $\Omega$ takisti
 
 ## Õppematerjali osad
-* [1 osa](materjalid/1_osa.md)
-* [2 osa](materjalid/2_osa.md)
-* [3 osa](materjalid/3_osa.md)
+* [Lihtsate signaalide saatmine kahe Arduino vahel](materjalid/1_lihtsad_signaalid.md)
+* [Keerukamate signaalide saatmine kahe Arduino vahel](materjalid/2_keerukamad_signaalid.md)
+* [Arduino liidestamine personaalarvutiga](materjalid/3_liidestamine_personaalarvutiga.md)
 
 ## Õppematerjali koostajad
 
-Eesnimi Perenimi (eesnimi.perenimi@ekiri.xx)
-Eesnimi Perenimi (eesnimi.perenimi@ekiri.xx)
+Tanel Toova (tanel.toova@tlu.ee)

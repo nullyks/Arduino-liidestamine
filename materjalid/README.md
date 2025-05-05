@@ -1,5 +1,5 @@
 # Õppematerjali osad
 
-* [1 osa](materjalid/1_osa.md)
-* [2 osa](materjalid/2_osa.md)
-* [3 osa](materjalid/3_osa.md)
+* [Lihtsate signaalide saatmine kahe Arduino vahel](materjalid/1_lihtsad_signaalid.md)
+* [Keerukamate signaalide saatmine kahe Arduino vahel](materjalid/2_keerukamad_signaalid.md)
+* [Arduino liidestamine personaalarvutiga](materjalid/3_liidestamine_personaalarvutiga.md)
