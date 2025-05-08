@@ -18,16 +18,21 @@ Selle õppematerjali puhul ei rakendata eristavat hindamist.
 
 ## Vajalikud vahendid
 * 1 x personaalarvuti (sobib nii Windows, Linux kui macOS operatsioonisüsteem)
-* 1 x Arduino UNO arendusplaat koos sobiva USB kaabliga
-* 1 x potentsiomeeter (makettplaadiga ühilduv)
+* 2 x Arduino UNO arendusplaat koos sobiva USB kaabliga
+* 3 x potentsiomeeter (makettplaadiga ühilduv)
 * 1 x nupp (makettplaadiga ühilduv)
 * 2 x LED (soovitavalt eri värvi)
 * 2 x 100 $\Omega$ takisti
+* 1 x RGB LED
+* 1 x alalisvoolu mootor
+* makettplaadi juhtmed (isane-isane)
+* makettplaadi juhtmed (emane-isane)
 
 ## Õppematerjali osad
 * [Lihtsate signaalide saatmine kahe Arduino vahel](materjalid/1_lihtsad_signaalid.md)
 * [Keerukamate signaalide saatmine kahe Arduino vahel](materjalid/2_keerukamad_signaalid.md)
 * [Arduino liidestamine personaalarvutiga](materjalid/3_liidestamine_personaalarvutiga.md)
+* [Iseseisvad ülesanded](materjalid/4_iseseisvad_ülesanded.md)
 
 ## Õppematerjali koostajad
 

@@ -1,4 +1,12 @@
-## Keerukamate signaalide saatmine kahe Arduino vahel
+# Keerukamate signaalide saatmine kahe Arduino vahel
+
+- [Andmete edastamine üle jadaliides](#andmete-edastamine-üle-jadaliides)
+  - [Näide Stringi saatmisest](#näide-stringi-saatmisest)
+  - [JSON andmevahetusvormingu kasutamine](#json-andmevahetusvormingu-kasutamine)
+- [Andmete edastamine üle WiFi](#andmete-edastamine-üle-wifi)
+  - [Kliendi kood](#Kliendi-kood)
+  - [Serveri kood](#Serveri-kood)
+
 Eelmises näites vaatasime, kuidas saame kahte Arduinot omavahel kahe juhtmega ühendades saata lihtsat binaarset signaali. Kui meil on vaja saata aga keerukamaid andmeid, siis selline lähenemine ei sobi.
 Järgnevalt vaatame keerukamate andmete saatmist kahel erineval juhul:
 * Kaks Arduinot on omavahel ühendatud kahe juhtmega üle mille saadetakse jadaliidese UART (ingl *Universal Asynchronous Receiver-Transmitter*) protokolli abil andmeid. **NB!** nagu eelmises näites nii on ka siin vajalik ühine GND ühendus.
@@ -100,6 +108,7 @@ JSON-i abil saab ühe sõnumiga edastada erinevat tüüpi andmeid. See on väga 
 
 Näiteks võib sellise JSON sõnumi edastada Arduino, mille küljes on lihtne fototakisti ja DHT22 sensor. Sõnum koostatakse kasutades ArduinoJson.h teeki.
 
+
 ~~~cpp
 //SAATJA
 #include <SoftwareSerial.h>
@@ -196,6 +205,7 @@ Arduino UNO R4 WiFi plaadid sisaldavad integreeritud WiFi-ühendust (tänu ESP32
 
 Allpool on ümber tehtud JSON andmevahetuse näide, kus üks UNO R4 WiFi arendusplaat (anduritega klient) saadab JSON-sõnumi teisele UNO R4 WiFi-le (server) üle WiFi TCP-ühenduse. Kasutame WiFiS3 teeki (osa Arduino R4 standardteekidest).
 
+### Kliendi kood
 ~~~cpp
 //KLIENT
 #include <WiFiS3.h>
@@ -259,6 +269,7 @@ void loop() {
 }
 ~~~
 
+### Serveri kood
 ~~~cpp
 //SERVER
 #include <WiFiS3.h>
