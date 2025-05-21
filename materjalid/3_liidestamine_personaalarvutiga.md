@@ -42,7 +42,7 @@ Jadaühendusega seotud funktsioonide kohta saad täpsemalt [lugeda siit](https:/
 ## Arduino liidestamine Processing arenduskeskkonnaga
 
 Sageli on tarvilik töödelda Arduino ja sellega liidestatud andurite abil saadud andmeid reaalajas või juhtida Arduino tööd läbi graafilise kasutajaliidese. 
-Arduino endal kipub sellise funktsionaalsuse jaoks jõudlust väheks jääma. Lahenduseks on taas kord vahetada andmeid arvutiga, pannes oluliselt suurema jõudlusega seadme täitma funktsioone, mida Arduino ise sooritada ei jõua.
+Arduino endal kipub sellise funktsionaalsuse jaoks jõudlust väheks jääma. Lahenduseks on taaskord vahetada andmeid arvutiga, pannes oluliselt suurema jõudlusega seadme täitma funktsioone, mida Arduino ise sooritada ei jõua.
 
 Üheks sageli kasutatavaks lahenduseks on [Processing](https://processing.org/) arenduskeskkond, mille saab paigaldadda arvutisse (töötab nii Windowsis, Linuxis kui macOS-is).
 
