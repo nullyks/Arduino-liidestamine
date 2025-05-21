@@ -15,6 +15,6 @@ Alljärgnev nimekiri sisaldab inimesi, kes on:
 
 | Nimi | Roll | Kontakt / GitHub/ e-mail|
 |------|------|-------------------|
-| Sinu nimi | Kaastöö autor | [GitHub kasutajanimi] või [e-mail] |
+| Kersti Kuuse | Teksti redigeerimine | [@kkuuse] |
 
 Tahad liituda? Vaata faili [CONTRIBUTING.md](./CONTRIBUTING.md).
