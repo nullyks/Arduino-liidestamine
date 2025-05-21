@@ -15,6 +15,6 @@ Alljärgnev nimekiri sisaldab inimesi, kes on:
 
 | Nimi | Roll | Kontakt / GitHub/ e-mail|
 |------|------|-------------------|
-| Kersti Kuuse | Teksti redigeerimine | [@kkuuse] |
+| Kersti Kuuse | Teksti redigeerimine | [@kkuuse](https://github.com/kkuuse) |
 
 Tahad liituda? Vaata faili [CONTRIBUTING.md](./CONTRIBUTING.md).
