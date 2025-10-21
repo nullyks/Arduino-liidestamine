@@ -91,6 +91,58 @@ void loop() {
 
 [Interaktiivne simulatsioon](https://www.tinkercad.com/things/aWeu8I6izJ3-ping-pong?sharecode=jb9FeLlcVBtkklh1f_wDyDHqJns84sqinYvRK5oNSmI)
 
+**NB!** Arduino UNO R4 arendusplaadi puhul SoftwareSerial teek ei tööta. Sellisel juhul tuleb kasutada riistvaralist UART-i Serial1-te kus RX/TX on kindlatel pin’idel.
+Saatja TX1 (D1) → Vastuvõtja RX1 (D0)
+Saatja RX1 (D0) ← Vastuvõtja TX1 (D1)
+
+~~~cpp
+// PING (UNO R4 WiFi)
+void setup() {
+  Serial.begin(9600);     // USB terminal
+  Serial1.begin(9600);    // Riistvaraline UART D0/D1
+}
+
+void loop() {
+  Serial1.println("ping");            // saada ping + \n
+  Serial.println("Saadetud: ping");
+
+  // Oota kuni 1 s vastust
+  unsigned long t0 = millis();
+  while (millis() - t0 < 1000) {
+    if (Serial1.available()) {
+      String response = Serial1.readStringUntil('\n');
+      Serial.print("Vastus: ");
+      Serial.println(response);
+      break;
+    }
+  }
+  delay(1000);
+}
+~~~
+
+~~~cpp
+// PONG (UNO R4 WiFi)
+void setup() {
+  Serial.begin(9600);
+  Serial1.begin(9600);
+}
+
+void loop() {
+  if (Serial1.available()) {
+    String message = Serial1.readString(); // või readStringUntil('\n')
+    message.trim();                         // eemaldab \r, \n, tühikud
+
+    Serial.print("Saadi: ");
+    Serial.println(message);
+
+    if (message.equalsIgnoreCase("ping")) {
+      Serial1.println("pong");             // lisa \n, et teisel poolel oleks lihtne lugeda
+      Serial.println("Saadetud: pong");
+    }
+  }
+}
+~~~
+
 ### JSON andmevahetusvormingu kasutamine
 
 JSON (JavaScript Object Notation) on lihtne ja inimloetav andmevahetusvorming, mida kasutatakse laialdaselt struktureeritud andmete edastamiseks rakenduste ja süsteemide vahel. See põhineb võtme-väärtuse paaridel ja andmestruktuuridel, nagu massiivid ja objektid, mis teevad sellest paindliku ja loogilise viisi mitmesuguse andmeinfo struktureerimiseks.
@@ -338,3 +390,4 @@ void loop() {
 }
 
 ~~~
+
