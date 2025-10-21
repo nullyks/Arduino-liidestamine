@@ -205,149 +205,136 @@ Arduino UNO R4 WiFi plaadid sisaldavad integreeritud WiFi-ühendust (tänu ESP32
 
 Allpool on ümber tehtud JSON andmevahetuse näide, kus üks UNO R4 WiFi arendusplaat (anduritega klient) saadab JSON-sõnumi teisele UNO R4 WiFi-le (server) üle WiFi TCP-ühenduse. Kasutame WiFiS3 teeki (osa Arduino R4 standardteekidest).
 
+Käivita esmalt server ja oota, et see annaks oma IP aadressi jadaühenduse kaudu. Kliendi koodis asenda saadud IP aadress.
+
+### Serveri kood
+~~~cpp
+// SERVER – UNO R4 WiFi
+#include <WiFiS3.h>
+#include <ArduinoJson.h>
+
+char ssid[] = "SINUVÕRK";
+char pass[] = "SINUPAROOL";
+
+const uint16_t PORT = 5000;
+
+WiFiServer server(PORT);
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial) {}
+
+  WiFi.begin(ssid, pass);
+  Serial.print("Ühendan WiFi-ga");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500); Serial.print(".");
+  }
+  Serial.println("\nWiFi OK");
+  delay(5000); //ootame 5 sekundit, et võrguseadistus DHCP käest kätte saada
+  Serial.print("IP: "); Serial.println(WiFi.localIP()); //kui IP on 0.0.0.0 siis ei saadud DHCP käest seadistust
+
+  server.begin();
+  Serial.print("TCP server kuulab pordil "); Serial.println(PORT);
+}
+
+void loop() {
+  WiFiClient client = server.available();
+  if (!client) return;
+
+  Serial.println("Klient ühendus.");
+
+  // loe ühe rea kaupa (kliendi saade lõpeb \n-iga)
+  String line = client.readStringUntil('\n');
+
+  StaticJsonDocument<200> doc;
+  DeserializationError err = deserializeJson(doc, line);
+  if (err) {
+    Serial.print("JSON viga: "); Serial.println(err.c_str());
+  } else {
+    float temp = doc["temperatuur"] | NAN;
+    float hum  = doc["niiskus"] | NAN;
+    bool  light = doc["valgus"] | false;
+    const char* room = doc["asukoht"] | "tundmatu";
+
+    Serial.println("Saabus andmesõnum:");
+    Serial.print("  Asukoht: "); Serial.println(room);
+    Serial.print("  Temperatuur: "); Serial.print(temp); Serial.println(" °C");
+    Serial.print("  Niiskus: "); Serial.print(hum);  Serial.println(" %");
+    Serial.print("  Valgus: "); Serial.println(light ? "Jah" : "Ei");
+    Serial.println();
+  }
+
+  client.stop();
+}
+~~~
+
 ### Kliendi kood
 ~~~cpp
-//KLIENT
 #include <WiFiS3.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
 
+#define DHTPIN 2
+#define DHTTYPE DHT22
 #define PHOTOPIN A0
 #define LIGHT_THRESHOLD 500
 
-DHT dht(2, DHT22+);
+char ssid[] = "SINUVÕRK";
+char pass[] = "SINUPAROOL";
 
-// WiFi andmed
-char ssid[] = "SINU_SSID";
-char pass[] = "SINU_PAROOL";
-
-// Serveri IP ja port (vastuvõtja IP)
-IPAddress serverIP(192, 168, 0, 2);  // asenda vastuvõtja IP-ga
-int serverPort = 8888;
+// Serveri IP peab kattuma serveri IP-ga, mille said serveri käivitamisel
+IPAddress serverIP(10, 167, 75, 167);
+const uint16_t serverPort = 5000;
 
 WiFiClient client;
+//DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
   Serial.begin(9600);
+  while (!Serial) {}
   dht.begin();
 
-  // Ühendu WiFi-võrguga
   WiFi.begin(ssid, pass);
+  Serial.print("Ühendan WiFi-ga");
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(500); Serial.print(".");
   }
-  Serial.println("\nÜhendatud WiFi-võrku!");
+  Serial.println("\nWiFi OK");
+  Serial.print("Kliendi IP: "); Serial.println(WiFi.localIP());
 }
 
 void loop() {
-  //Loeme andurite väärtused
-  float temperatuur = dht.readTemperature();
-  float niiskus = dht.readHumidity();
-  bool valgus = analogRead(PHOTOPIN) > LIGHT_THRESHOLD;
+  float temperatuur = dht.readTemperature();   // °C
+  float niiskus     = dht.readHumidity();
+  bool  valgus      = analogRead(PHOTOPIN) > LIGHT_THRESHOLD;
 
-  //koostame JSON teate
+  // kui DHT andur eksib, ära saada prügi
+  if (isnan(temperatuur) || isnan(niiskus)) {
+    Serial.println("DHT lugemisviga, proovin uuesti...");
+    delay(2000);
+    return;
+  }
+
   StaticJsonDocument<200> doc;
   doc["temperatuur"] = temperatuur;
-  doc["niiskus"] = niiskus;
-  doc["valgus"] = valgus;
-  doc["asukoht"] = "elutuba";
+  doc["niiskus"]     = niiskus;
+  doc["valgus"]      = valgus;
+  doc["asukoht"]     = "elutuba";
 
-  if (client.connect(serverIP, serverPort)) { //kui saame serveriga ühenduse
-    serializeJson(doc, client); //saadame JSON teate serverile
-    client.println();  //saadame serverile tühja rea
-    client.stop(); //lõpetame serverile andmete saatmise.
-    //Kirjutame arvuti jadaliidese peale välja, mida me just saatsime
+  if (client.connect(serverIP, serverPort)) {
+    serializeJson(doc, client);
+    client.println();          // lõpetame reaga, et server saaks readStringUntil('\n')
+    client.flush();
+    client.stop();
+
     Serial.println("JSON saadetud:");
     serializeJsonPretty(doc, Serial);
     Serial.println();
-  } else { //kui ei saa serveriga ühendust
+  } else {
     Serial.println("Ühendus serveriga ebaõnnestus.");
   }
 
   delay(2000);
 }
-~~~
 
-### Serveri kood
-~~~cpp
-//SERVER
-#include <WiFiS3.h>
-#include <ArduinoJson.h>
-
-// WiFi andmed
-char ssid[] = "SINU_SSID";
-char pass[] = "SINU_PAROOL";
-
-// TCP serveri port
-int localPort = 5000;
-
-WiFiServer server(localPort);
-
-void setup() {
-  Serial.begin(9600);
-
-  IPAddress localIP(192, 168, 0, 2);     // soovitud IP-aadress
-  IPAddress gateway(192, 168, 0, 1);     // tavaliselt ruuteri IP
-  IPAddress subnet(255, 255, 255, 0);    // tüüpiline koduvõrk
-
-  // Määra staatiline IP
-  if (!WiFi.config(localIP, gateway, subnet)) {
-    Serial.println("Staatilise IP seadistamine ebaõnnestus");
-  }
-
-  //Ühendume WiFi võrku
-  WiFi.begin(ssid, pass);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.print("\nIP-aadress: ");
-  Serial.println(WiFi.localIP());
-
-  server.begin();
-  Serial.println("TCP server käivitatud, ootab ühendusi...");
-}
-
-void loop() {
-  WiFiClient client = server.available();
-
-  if (client) { //kui klient ühendub
-    Serial.println("Ühendus kliendiga loodud!");
-
-    String jsonString = client.readStringUntil('\n'); //loe kliendi teade kuni reavahetuseni.
-
-    StaticJsonDocument<200> doc; //tee valmis tühi JSON objekt
-    //Sisusta JSON objekt kliendilt saadud andmetega
-    DeserializationError error = deserializeJson(doc, jsonString);
-
-    if (error) {
-      Serial.print("JSON viga: ");
-      Serial.println(error.c_str());
-    } else {
-      //Loe JSON objektist andmed
-      float temp = doc["temperatuur"];
-      float hum = doc["niiskus"];
-      bool light = doc["valgus"];
-      const char* room = doc["asukoht"];
-
-      //Kirjuta andmed välja arvuti jadaliidese peale
-      Serial.println("Saabus andmesõnum:");
-      Serial.print("  Asukoht: ");
-      Serial.println(room);
-      Serial.print("  Temperatuur: ");
-      Serial.print(temp);
-      Serial.println(" °C");
-      Serial.print("  Niiskus: ");
-      Serial.print(hum);
-      Serial.println(" %");
-      Serial.print("  Valgust on ruumis: ");
-      Serial.println(light ? "Jah" : "Ei");
-      Serial.println();
-    }
-
-    client.stop(); //pane kliendi ühendus kinni
-  }
-}
 ~~~
