@@ -1,63 +1,74 @@
 ### Saatja kood
 ~~~cpp
-#include <WiFiS3.h>         // Arduino UNO R4 WiFi võrgumooduli teek
-#include <WiFiUdp.h>        // UDP suhtluseks
-#include <ArduinoJson.h>    // JSON andmestruktuuride jaoks
+// CLIENT – UNO R4 WiFi (TCP)
+// Vajab: WiFiS3, ArduinoJson
+#include <WiFiS3.h>
+#include <ArduinoJson.h>
 
-const char* ssid = "SINU_WIFI";          // WiFi võrgu nimi (SSID)
-const char* password = "SINU_SALASONA";  // WiFi parool
+char ssid[] = "SINUVÕRK";
+char pass[] = "SINUPAROOL";
 
-const int buttonPin = 2;     // Nupp ühendatud digitaalsisendile 2
-bool buttonPressed = false;  // Kas nuppu hoitakse all?
-unsigned long pressStart = 0; // Nupu vajutamise algusaeg
+const int BUTTON_PIN = 2;     // kasutame INPUT_PULLUP-i
+bool buttonPressed = false;
+unsigned long pressStart = 0;
 
-WiFiUDP udp;
-IPAddress receiverIP(192, 168, 0, 2);   // Vastuvõtva UNO IP-aadress
-unsigned int receiverPort = 4210;        // UDP port, kuhu saata
+// >>> ASENDA  IP-ga, mida server Serial näitas <<<
+IPAddress serverIP(10, 167, 75, 167);  // NÄIDE
+const uint16_t serverPort = 6000;
+
+WiFiClient client;
 
 void setup() {
-  pinMode(buttonPin, INPUT_PULLUP);   // Nupp tõmmatakse üles sisemise takistiga
-  Serial.begin(9600);                 // Serial-monitori jaoks
-  WiFi.begin(ssid, password);         // WiFi ühenduse loomine
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  // Ootame, kuni ühendus on loodud
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  Serial.begin(9600);
+  while (!Serial) {}
 
-  Serial.println("\nWiFi ühendatud, IP: " + WiFi.localIP().toString());
+  WiFi.begin(ssid, pass);
+  Serial.print("Ühendan WiFi-ga");
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println("\nWiFi OK");
+
+  delay(5000); //Anname DHCP-le aega
+  Serial.print("Kliendi IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Siht: ");
+  Serial.print(serverIP);
+  Serial.print(":");
+  Serial.println(serverPort);
 }
 
 void loop() {
-  int buttonState = digitalRead(buttonPin);
+  int state = digitalRead(BUTTON_PIN);
 
-  // Vajutuse algus
-  if (buttonState == LOW && !buttonPressed) {
+  // vajutuse algus (aktiivne LOW)
+  if (state == LOW && !buttonPressed) {
     pressStart = millis();
     buttonPressed = true;
   }
 
-  // Nupu vabastamine → arvutame kestuse ja saadame
-  if (buttonState == HIGH && buttonPressed) {
+  // vabastus → arvuta kestus ja saada
+  if (state == HIGH && buttonPressed) {
     unsigned long duration = millis() - pressStart;
     buttonPressed = false;
 
-    // Koostame JSON objekti
     StaticJsonDocument<128> doc;
-    doc["type"] = "press_duration";      // Tüüp (võimalik hiljem laiendada)
-    doc["duration_ms"] = duration;       // Kestus millisekundites
+    doc["type"] = "press_duration";
+    doc["duration_ms"] = duration;
+    Serial.println(duration); //kontroll, et saime nupuvajutuse aja
 
-    char buffer[128];
-    serializeJson(doc, buffer);          // Teisendame JSON stringiks
+    if (client.connect(serverIP, serverPort)) {
+      // Saadame ühe rea JSON-i + '\n', et serveri readStringUntil('\n') lõpetaks
+      serializeJson(doc, client);
+      client.println();
+      client.flush();
+      client.stop();
 
-    // Saadame UDP paketina
-    udp.beginPacket(receiverIP, receiverPort);
-    udp.write((const uint8_t*)buffer, strlen(buffer));
-    udp.endPacket();
-
-    Serial.print("Saadetud JSON: ");
-    Serial.println(buffer);
+      Serial.print("Saadetud kestus (ms): ");
+      Serial.println(duration);
+    } else {
+      Serial.println("Ühendus serveriga ebaõnnestus.");
+    }
   }
 }
 
@@ -66,70 +77,72 @@ void loop() {
 
 ### Vastuvõtja kood
 ~~~cpp
-#include <WiFiS3.h>         // Arduino UNO R4 WiFi teek
-#include <WiFiUdp.h>        // UDP protokolli kasutamiseks
-#include <ArduinoJson.h>    // JSON andmete vastuvõtmiseks
+// SERVER – UNO R4 WiFi (TCP)
+// Vajab: WiFiS3, ArduinoJson
+#include <WiFiS3.h>
+#include <ArduinoJson.h>
 
-IPAddress local_IP(192, 168, 0, 2);     // Soovitud IP
-IPAddress gateway(192, 168, 0, 1);      // Ruuteri IP (tavaliselt .1)
-IPAddress subnet(255, 255, 255, 0);     // Võrgumask
+char ssid[] = "SINUVÕRK";
+char pass[] = "SINUPAROOL";
 
-const char* ssid = "SINU_WIFI";          // WiFi võrgu nimi
-const char* password = "SINU_SALASONA";  // WiFi parool
+const uint16_t PORT = 6000;
+const int BUZZER_PIN = 3;
 
-const int buzzerPin = 3;     // Summer ühendatud klemmile 3 (digitaalne väljund)
-
-WiFiUDP udp;
-unsigned int localPort = 4210;     // Sama port, kuhu esimene UNO saadab
-char packetBuffer[256];            // Vastuvõetud UDP paketi puhver
+WiFiServer server(PORT);
 
 void setup() {
-  pinMode(buzzerPin, OUTPUT);   // Seame summeri väljundiks
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
   Serial.begin(9600);
+  while (!Serial) {}
 
-  // Määrame staatilise IP
-  if (!WiFi.config(local_IP, gateway, subnet)) {
-    Serial.println("IP seadistamine ebaõnnestus");
-  }
+  WiFi.begin(ssid, pass);
+  Serial.print("Ühendan WiFi-ga");
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println("\nWiFi OK");
+  delay(3000); // anna DHCP-le veidi aega
 
-  WiFi.begin(ssid, password);   // Ühendume WiFi-võrguga
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP()); // selle IP kopeeri saatjale
 
-  udp.begin(localPort);         // Alustame UDP kuulamist määratud pordil
-  Serial.println("\nWiFi ühendatud, IP: " + WiFi.localIP().toString());
+  server.begin();
+  Serial.print("TCP server kuulab pordil ");
+  Serial.println(PORT);
 }
 
 void loop() {
-  int packetSize = udp.parsePacket();   // Kas saabus UDP pakett?
-  if (packetSize) {
-    int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-    if (len > 0) {
-      packetBuffer[len] = '\0';         // Null-lõpetame stringi
+  WiFiClient client = server.available();
+  if (!client) return;
 
-      StaticJsonDocument<256> doc;
-      DeserializationError error = deserializeJson(doc, packetBuffer);
+  Serial.println("Klient ühendus.");
 
-      if (!error) {
-        // Kontrollime, kas sõnum on õiget tüüpi
-        if (doc["type"] == "press_duration") {
-          unsigned long duration = doc["duration_ms"];  // Loeme kestuse
-          Serial.print("Saadi kestus (ms): ");
-          Serial.println(duration);
+  // Loeme ühe rea (kliendi lõpus peab olema '\n')
+  String line = client.readStringUntil('\n');
 
-          // Mängime heli
-          digitalWrite(buzzerPin, HIGH);
-          delay(duration);  // Helisignaali kestus
-          digitalWrite(buzzerPin, LOW);
-        }
-      } else {
-        Serial.print("JSON viga: ");
-        Serial.println(error.c_str());
-      }
+  StaticJsonDocument<256> doc;
+  DeserializationError err = deserializeJson(doc, line);
+
+  if (err) {
+    Serial.print("JSON viga: ");
+    Serial.println(err.c_str());
+  } else {
+    const char* type = doc["type"] | "";
+    if (strcmp(type, "press_duration") == 0) {
+      unsigned long duration = doc["duration_ms"] | 0UL;
+      Serial.print("Saadi kestus (ms): ");
+      Serial.println(duration);
+
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(duration);
+      digitalWrite(BUZZER_PIN, LOW);
+    } else {
+      Serial.print("Tundmatu type: ");
+      Serial.println(type);
     }
   }
-}
 
+  client.stop();
+  Serial.println("Klient katkestas.\n");
+}
 ~~~
