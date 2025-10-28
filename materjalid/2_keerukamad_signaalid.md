@@ -92,8 +92,8 @@ void loop() {
 [Interaktiivne simulatsioon](https://www.tinkercad.com/things/aWeu8I6izJ3-ping-pong?sharecode=jb9FeLlcVBtkklh1f_wDyDHqJns84sqinYvRK5oNSmI)
 
 **NB!** Arduino UNO R4 arendusplaadi puhul SoftwareSerial teek ei tööta. Sellisel juhul tuleb kasutada riistvaralist UART-i Serial1-te kus RX/TX on kindlatel pin’idel.
-Saatja TX1 (D1) → Vastuvõtja RX1 (D0)
-Saatja RX1 (D0) ← Vastuvõtja TX1 (D1)
+* Saatja TX1 (D1) → Vastuvõtja RX1 (D0)
+* Saatja RX1 (D0) ← Vastuvõtja TX1 (D1)
 
 ~~~cpp
 // PING (UNO R4 WiFi)
@@ -339,7 +339,7 @@ IPAddress serverIP(10, 167, 75, 167);
 const uint16_t serverPort = 5000;
 
 WiFiClient client;
-//DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
   Serial.begin(9600);
@@ -390,4 +390,5 @@ void loop() {
 }
 
 ~~~
+
 
