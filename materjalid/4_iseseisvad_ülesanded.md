@@ -1,39 +1,33 @@
 # Iseseisvad ülesanded
 
-## ALARM!
-Koosta kahest Arduino UNO-st, summerist ja PIR-ist koosnev seade.
-* PIR on ühe Arduino UNO küljes
-* summer on teise Arduino UNO küljes
-* Kui PIR tuvastab liikumise, siis summer annab alarmi
+Iga ülesande lahenduse juurde lisa ühendusjoonis ja kommenteeritud kood. Enne kahe plaadi juhtmega ühendamist lülita toide välja ning ühenda ka GND-viigud. UNO R3 jaoks mõeldud Tinkercadi näited ei pruugi kujutada UNO R4 WiFi erisusi.
 
-[Lahendus](https://www.tinkercad.com/things/dUG47nIvkQw-alarm?sharecode=JJag4QnCHDe9HKRtAbpsH-j5zrdGKm9BzvGwASghZ44)
+## 1. Alarm
 
-## Värvivalija
-Koosta kahest Arduino UNO-st, RGB LED-ist ja kolmest potentsiomeerist koosnev seade.
-* Potentsiomeetrid on ühe Arduino küljes
-* LED on teise Arduino küljes
-* Iga potentsiomeetert kontrollib ühtle LED-i RGB kanalist
+Ehita kahe Arduino UNO, PIR-liikumisanduri ja aktiivsummeriga alarm. PIR on ühe plaadi, summer teise küljes. Liikumise tuvastamisel annab teine plaat helisignaali. Vali summeri juhtskeem selle voolutarbe järgi.
 
-[Lahendus ilma JSONi teegita](https://www.tinkercad.com/things/lNQ0qwEMnPZ-varvivalija?sharecode=JFCJ7t9JcX8cWCKqZBTOaufWxw40wfnbUTa97Aod0Ec)
+[UNO R3 näidislahendus Tinkercadis](https://www.tinkercad.com/things/dUG47nIvkQw-alarm?sharecode=JJag4QnCHDe9HKRtAbpsH-j5zrdGKm9BzvGwASghZ44)
 
-[Lahendus JSONi teegi abil](meedia/värvivalija_JSON.md)
+## 2. Värvivalija
 
-## Kuulekas ventilaator
-Ehita Arduino UNO-st ja alalisvoolumootorist koosnev seade
-* Arvutist saab Arduino UNO-le saata üle serial pordi käske: "aeglasemalt", "kiiremini", "start" ja "stopp"
-* "start" paneb mootori tööle 50% töötsükliga
-* "stopp" peatab mootori
-* "kiiremini" lisab töötsüklile 10%
-* "aeglasemat" lahutab töötsüklist 10%
+Ehita kahe Arduino UNO, RGB-LED-i ja kolme potentsiomeetriga seade. Iga potentsiomeeter määrab ühe värvikanali heleduse. Paigalda RGB-LED-i igale kanalile voolupiirav takisti ning arvesta, kas LED-il on ühine anood või ühine katood.
 
-[Lahendus](https://www.tinkercad.com/things/aaTSHRr008n-kuulekas-ventilaator?sharecode=alywwVQjurgwfiuHY3e4iVdKW8BbrgWaX0BBD_IXNrk)
+[UNO R3 näidislahendus ilma JSON-ita](https://www.tinkercad.com/things/lNQ0qwEMnPZ-varvivalija?sharecode=JFCJ7t9JcX8cWCKqZBTOaufWxw40wfnbUTa97Aod0Ec) · [Näidiskood JSON-iga](meedia/värvivalija_JSON.md)
 
-## Kaasaaegne morse
-Ehita kahe Arduino UNO, nupu ja summeri abil süsteem, kus üle WiFi saadetakse ühest Arduinost teise nupu allhoidmise aeg ja teine arduino mängib selle peale summeri abil sama pika helisignaali.
+## 3. Kuulekas ventilaator
 
-[Lahendus](meedia/kaasaaegneMorse.md)
+Ehita Arduino UNO, alalisvoolumootori ja mootoridraiveriga ventilaator. Võta arvuti jadaliidese kaudu vastu käsud `start`, `stopp`, `kiiremini` ja `aeglasemalt`. `start` seab PWM-i töötsükli 50%-le; kiiruse muutmise käsud muudavad seda 10 protsendipunkti kaupa vahemikus 0–100%. `stopp` peatab mootori. Mootorit ei ühendata otse Arduino viiguga; vali draiver ning toide mootori andmete järgi.
 
-## Suurust muutev kast
-Loo Arduino UNO ja Processingu abil süsteem, kus kaks Arduino UNO küljes olevat potentsiomeetrit määravad, millise kõrguse ja laiusega ristkülik joonistatakse Processingu aknasse.
+[UNO R3 näidislahendus Tinkercadis](https://www.tinkercad.com/things/aaTSHRr008n-kuulekas-ventilaator?sharecode=alywwVQjurgwfiuHY3e4iVdKW8BbrgWaX0BBD_IXNrk)
 
-[Lahendus](meedia/suurustmuutevkast.md)
+## 4. Kaasaegne morse
+
+Ehita kahe **UNO R4 WiFi** plaadi, nupu ja aktiivsummeriga süsteem. Esimene plaat mõõdab nupu allhoidmise kestuse ja saadab selle WiFi kaudu teisele plaadile; teine annab sama pika helisignaali. Mõlemad plaadid peavad saama samasse WiFi-võrku. Lisa nupule tarkvaraline või riistvaraline võnkumise summutus, et üks vajutus ei tekitaks mitut sõnumit.
+
+[Näidiskood](meedia/kaasaaegneMorse.md)
+
+## 5. Suurust muutev kast
+
+Loo **ühe** Arduino UNO, kahe potentsiomeetri ja Processinguga süsteem. Potentsiomeetrid määravad Processingu aknas joonistatava ristküliku laiuse ja kõrguse.
+
+[Näidiskood](meedia/suurustmuutevkast.md)

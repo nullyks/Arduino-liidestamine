@@ -1,3 +1,7 @@
+# Kaasaegse morse näidiskood (UNO R4 WiFi)
+
+Kasuta kaht UNO R4 WiFi plaati samas WiFi-võrgus. Paigalda ArduinoJson 7, ühenda nupp viigu D2 ja GND vahele ning kasuta sobiva juhtskeemiga aktiivsummerit. Käivita esmalt vastuvõtja ja asenda saatja koodis `serverIP` vastuvõtja tegeliku IP-aadressiga. Kood piirab ühe helisignaali pikkuse 5 sekundiga; nupu väga kiire vajutamine võib vajada eraldi võnkumise summutust.
+
 ### Saatja kood
 ~~~cpp
 // CLIENT – UNO R4 WiFi (TCP)
@@ -13,7 +17,7 @@ bool buttonPressed = false;
 unsigned long pressStart = 0;
 
 // >>> ASENDA  IP-ga, mida server Serial näitas <<<
-IPAddress serverIP(10, 167, 75, 167);  // NÄIDE
+IPAddress serverIP(192, 168, 1, 100);  // ASENDA vastuvõtja IP-aadressiga
 const uint16_t serverPort = 6000;
 
 WiFiClient client;
@@ -52,7 +56,7 @@ void loop() {
     unsigned long duration = millis() - pressStart;
     buttonPressed = false;
 
-    StaticJsonDocument<128> doc;
+    JsonDocument doc;
     doc["type"] = "press_duration";
     doc["duration_ms"] = duration;
     Serial.println(duration); //kontroll, et saime nupuvajutuse aja
@@ -120,7 +124,7 @@ void loop() {
   // Loeme ühe rea (kliendi lõpus peab olema '\n')
   String line = client.readStringUntil('\n');
 
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   DeserializationError err = deserializeJson(doc, line);
 
   if (err) {
@@ -130,6 +134,7 @@ void loop() {
     const char* type = doc["type"] | "";
     if (strcmp(type, "press_duration") == 0) {
       unsigned long duration = doc["duration_ms"] | 0UL;
+      duration = constrain(duration, 0UL, 5000UL);
       Serial.print("Saadi kestus (ms): ");
       Serial.println(duration);
 

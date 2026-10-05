@@ -1,3 +1,7 @@
+# Värvivalija näidiskood (UNO R3)
+
+Ühenda kahe plaadi GND-viigud, saatja D11 vastuvõtja D10-ga ja vastuvõtja D11 saatja D10-ga. Näide eeldab ühise katoodiga RGB-LED-i, mille iga värvikanal on ühendatud sobiva voolupiirava takisti kaudu PWM-viiguga. Ühise anoodiga LED-i puhul tuleb PWM-väärtused pöörata (`255 - väärtus`). Mõlemale plaadile tuleb paigaldada ArduinoJson 7.
+
 ### Saatja kood
 ~~~cpp
 #include <SoftwareSerial.h>
@@ -16,7 +20,7 @@ void loop() {
   int B = map(analogRead(A2), 0, 1023, 0, 255);
 
   // Loo JSON objekt ja täida andmetega
-  StaticJsonDocument<100> doc; // Väike JSON dokument (~50 baiti piisab 3 väärtuse jaoks)
+  JsonDocument doc;
   doc["R"] = R;
   doc["G"] = G;
   doc["B"] = B;
@@ -54,14 +58,14 @@ void loop() {
   if (mySerial.available()) {
     String data = mySerial.readStringUntil('\n'); // Loe kuni reavahetuseni
 
-    StaticJsonDocument<100> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, data); // Proovi parsida JSON
 
     if (!error) {
       // Kui parsimine õnnestus, loe väärtused ja kasuta
-      int r = doc["R"];
-      int g = doc["G"];
-      int b = doc["B"];
+      int r = constrain(doc["R"] | 0, 0, 255);
+      int g = constrain(doc["G"] | 0, 0, 255);
+      int b = constrain(doc["B"] | 0, 0, 255);
 
       analogWrite(R, r);
       analogWrite(G, g);
