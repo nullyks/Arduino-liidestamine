@@ -21,7 +21,14 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(3, digitalRead(2) == LOW ? HIGH : LOW);
+  int nupuOlek = digitalRead(2);
+
+  if (nupuOlek == LOW) {
+    // INPUT_PULLUP korral tähendab LOW, et nupp on alla vajutatud.
+    digitalWrite(3, HIGH);
+  } else {
+    digitalWrite(3, LOW);
+  }
 }
 ```
 
@@ -34,7 +41,13 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(2, digitalRead(3));
+  int signaaliOlek = digitalRead(3);
+
+  if (signaaliOlek == HIGH) {
+    digitalWrite(2, HIGH);
+  } else {
+    digitalWrite(2, LOW);
+  }
 }
 ```
 

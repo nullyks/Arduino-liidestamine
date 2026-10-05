@@ -12,25 +12,24 @@ Kasuta kaht UNO R4 WiFi plaati samas WiFi-võrgus. Paigalda ArduinoJson 7, ühen
 char ssid[] = "SINUVÕRK";
 char pass[] = "SINUPAROOL";
 
-const int BUTTON_PIN = 2;     // kasutame INPUT_PULLUP-i
-bool buttonPressed = false;
-unsigned long pressStart = 0;
+const int nupuViik = 2;
+bool nuppOliVajutatud = false;
+unsigned long vajutuseAlgus = 0;
 
 // >>> ASENDA  IP-ga, mida server Serial näitas <<<
 IPAddress serverIP(192, 168, 1, 100);  // ASENDA vastuvõtja IP-aadressiga
 const uint16_t serverPort = 6000;
 
-WiFiClient client;
-
 void setup() {
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(nupuViik, INPUT_PULLUP);
 
   Serial.begin(9600);
-  while (!Serial) {}
-
   WiFi.begin(ssid, pass);
   Serial.print("Ühendan WiFi-ga");
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
   Serial.println("\nWiFi OK");
 
   delay(5000); //Anname DHCP-le aega
@@ -43,24 +42,24 @@ void setup() {
 }
 
 void loop() {
-  int state = digitalRead(BUTTON_PIN);
+  int nupuOlek = digitalRead(nupuViik);
 
-  // vajutuse algus (aktiivne LOW)
-  if (state == LOW && !buttonPressed) {
-    pressStart = millis();
-    buttonPressed = true;
+  // INPUT_PULLUP korral tähendab LOW vajutatud nuppu.
+  if (nupuOlek == LOW && nuppOliVajutatud == false) {
+    vajutuseAlgus = millis();
+    nuppOliVajutatud = true;
   }
 
-  // vabastus → arvuta kestus ja saada
-  if (state == HIGH && buttonPressed) {
-    unsigned long duration = millis() - pressStart;
-    buttonPressed = false;
+  // Kui nupp vabastatakse, saadame vajutuse kestuse.
+  if (nupuOlek == HIGH && nuppOliVajutatud == true) {
+    unsigned long kestus = millis() - vajutuseAlgus;
+    nuppOliVajutatud = false;
 
     JsonDocument doc;
     doc["type"] = "press_duration";
-    doc["duration_ms"] = duration;
-    Serial.println(duration); //kontroll, et saime nupuvajutuse aja
+    doc["duration_ms"] = kestus;
 
+    WiFiClient client;
     if (client.connect(serverIP, serverPort)) {
       // Saadame ühe rea JSON-i + '\n', et serveri readStringUntil('\n') lõpetaks
       serializeJson(doc, client);
@@ -69,7 +68,7 @@ void loop() {
       client.stop();
 
       Serial.print("Saadetud kestus (ms): ");
-      Serial.println(duration);
+      Serial.println(kestus);
     } else {
       Serial.println("Ühendus serveriga ebaõnnestus.");
     }
@@ -90,20 +89,21 @@ char ssid[] = "SINUVÕRK";
 char pass[] = "SINUPAROOL";
 
 const uint16_t PORT = 6000;
-const int BUZZER_PIN = 3;
+const int summeriViik = 3;
 
 WiFiServer server(PORT);
 
 void setup() {
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
+  pinMode(summeriViik, OUTPUT);
+  digitalWrite(summeriViik, LOW);
 
   Serial.begin(9600);
-  while (!Serial) {}
-
   WiFi.begin(ssid, pass);
   Serial.print("Ühendan WiFi-ga");
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
   Serial.println("\nWiFi OK");
   delay(3000); // anna DHCP-le veidi aega
 
@@ -117,37 +117,39 @@ void setup() {
 
 void loop() {
   WiFiClient client = server.available();
-  if (!client) return;
+  if (client) {
+    Serial.println("Klient ühendas.");
 
-  Serial.println("Klient ühendus.");
+    // Loeme ühe rea (kliendi sõnum lõpeb reavahetusega).
+    client.setTimeout(1000);
+    String rida = client.readStringUntil('\n');
 
-  // Loeme ühe rea (kliendi lõpus peab olema '\n')
-  String line = client.readStringUntil('\n');
+    JsonDocument doc;
+    DeserializationError viga = deserializeJson(doc, rida);
 
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, line);
-
-  if (err) {
-    Serial.print("JSON viga: ");
-    Serial.println(err.c_str());
-  } else {
-    const char* type = doc["type"] | "";
-    if (strcmp(type, "press_duration") == 0) {
-      unsigned long duration = doc["duration_ms"] | 0UL;
-      duration = constrain(duration, 0UL, 5000UL);
-      Serial.print("Saadi kestus (ms): ");
-      Serial.println(duration);
-
-      digitalWrite(BUZZER_PIN, HIGH);
-      delay(duration);
-      digitalWrite(BUZZER_PIN, LOW);
+    if (viga) {
+      Serial.print("JSON-i lugemisviga: ");
+      Serial.println(viga.c_str());
     } else {
-      Serial.print("Tundmatu type: ");
-      Serial.println(type);
-    }
-  }
+      String teateTyyp = doc["type"].as<String>();
+      if (teateTyyp == "press_duration") {
+        unsigned long kestus = doc["duration_ms"].as<unsigned long>();
+        if (kestus > 5000) {
+          kestus = 5000;
+        }
 
-  client.stop();
-  Serial.println("Klient katkestas.\n");
+        Serial.print("Saadi kestus (ms): ");
+        Serial.println(kestus);
+
+        digitalWrite(summeriViik, HIGH);
+        delay(kestus);
+        digitalWrite(summeriViik, LOW);
+      } else {
+        Serial.print("Tundmatu teate tüüp: ");
+        Serial.println(teateTyyp);
+      }
+    }
+    client.stop();
+  }
 }
 ~~~

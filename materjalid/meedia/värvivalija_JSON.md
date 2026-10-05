@@ -14,16 +14,21 @@ void setup() {
 }
 
 void loop() {
-  // Loe analoogväärtused ja teisenda need vahemikku 0–255
-  int R = map(analogRead(A0), 0, 1023, 0, 255);
-  int G = map(analogRead(A1), 0, 1023, 0, 255);
-  int B = map(analogRead(A2), 0, 1023, 0, 255);
+  // Kõigepealt loeme kolm potentsiomeetrit.
+  int punaseNait = analogRead(A0);
+  int roheliseNait = analogRead(A1);
+  int siniseNait = analogRead(A2);
+
+  // Teisendame näidud PWM-i vahemikku 0–255.
+  int punane = map(punaseNait, 0, 1023, 0, 255);
+  int roheline = map(roheliseNait, 0, 1023, 0, 255);
+  int sinine = map(siniseNait, 0, 1023, 0, 255);
 
   // Loo JSON objekt ja täida andmetega
   JsonDocument doc;
-  doc["R"] = R;
-  doc["G"] = G;
-  doc["B"] = B;
+  doc["R"] = punane;
+  doc["G"] = roheline;
+  doc["B"] = sinine;
 
   // Serialiseerib JSON objekti ja saadab tekstina
   serializeJson(doc, mySerial);
@@ -40,38 +45,44 @@ void loop() {
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h> // JSON-parsimiseks
 
-#define G 3
-#define B 5
-#define R 6
+const int rohelineViik = 3;
+const int sinineViik = 5;
+const int punaneViik = 6;
 
 SoftwareSerial mySerial(10, 11); // RX (Arduino kuulab siin), TX
 
 void setup() {
-  pinMode(R, OUTPUT);
-  pinMode(G, OUTPUT);
-  pinMode(B, OUTPUT);
+  pinMode(punaneViik, OUTPUT);
+  pinMode(rohelineViik, OUTPUT);
+  pinMode(sinineViik, OUTPUT);
+  Serial.begin(9600); // Veateated arvuti jadamonitorile
   mySerial.begin(4800); // Serial-ühendus teise Arduino'ga
+  mySerial.setTimeout(300);
 }
 
 void loop() {
   // Kui on saadaval sissetulev sõnum
-  if (mySerial.available()) {
+  if (mySerial.available() > 0) {
     String data = mySerial.readStringUntil('\n'); // Loe kuni reavahetuseni
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, data); // Proovi parsida JSON
 
-    if (!error) {
-      // Kui parsimine õnnestus, loe väärtused ja kasuta
-      int r = constrain(doc["R"] | 0, 0, 255);
-      int g = constrain(doc["G"] | 0, 0, 255);
-      int b = constrain(doc["B"] | 0, 0, 255);
-
-      analogWrite(R, r);
-      analogWrite(G, g);
-      analogWrite(B, b);
+    if (error) {
+      Serial.print("JSON-i lugemisviga: ");
+      Serial.println(error.c_str());
     } else {
-      // Vea korral võib siia lisada näiteks vilgutamise või vea logimise
+      int saadudPunane = doc["R"].as<int>();
+      int saadudRoheline = doc["G"].as<int>();
+      int saadudSinine = doc["B"].as<int>();
+
+      int punane = constrain(saadudPunane, 0, 255);
+      int roheline = constrain(saadudRoheline, 0, 255);
+      int sinine = constrain(saadudSinine, 0, 255);
+
+      analogWrite(punaneViik, punane);
+      analogWrite(rohelineViik, roheline);
+      analogWrite(sinineViik, sinine);
     }
   }
 }

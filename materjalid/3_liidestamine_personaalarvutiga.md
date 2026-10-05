@@ -31,13 +31,14 @@ void setup()
 
 void loop()
 {
-  if (Serial.available()) {
+  if (Serial.available() > 0) {
     String nimi = Serial.readStringUntil('\n');
     nimi.trim();
-    if (nimi.length() == 0) return;
-    Serial.print("Tere ");
-    Serial.print(nimi);
-    Serial.println("!");
+    if (nimi.length() > 0) {
+      Serial.print("Tere ");
+      Serial.print(nimi);
+      Serial.println("!");
+    }
   }
 }
 ~~~
@@ -65,7 +66,7 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available()) { //kui Serial ühenduse peale on saadetud andmeid
+  if (Serial.available() > 0) { // Arvutist on tulnud vähemalt üks märk.
     char command = Serial.read(); // Loeme ühe märgi
     if (command == '1') { 
       digitalWrite(ledPin, HIGH); // Lülita LED sisse
@@ -99,32 +100,47 @@ void setup() {
 void draw() {
   background(240); // Helehall taust
 
-  // Joonistame toggle-nupu
-  // Kui LED on sees, siis roheline nupp, muidu punane
-  fill(ledState ? color(0, 200, 0) : color(200, 0, 0));
+  // Põleva LED-i korral on nupp roheline, muidu punane.
+  if (ledState) {
+    fill(0, 200, 0);
+  } else {
+    fill(200, 0, 0);
+  }
   rect(100, 70, 100, 60, 10); // x=100, y=70, laius=100, kõrgus=60, ümardus=10px
 
   // Tekst nupule
   fill(255); // Valge tekst
   textAlign(CENTER, CENTER);
   textSize(16);
-  text(ledState ? "LED ON" : "LED OFF", 150, 100); // Tekst nupu keskel
+  if (ledState) {
+    text("LED ON", 150, 100);
+  } else {
+    text("LED OFF", 150, 100);
+  }
 }
 
 // See funktsioon käivitub iga kord, kui kasutaja klikib hiirega
 void mousePressed() {
   // Kontrollime, kas klikk oli nupu alas (koordinaadid vastavad nupule)
-  if (mouseX >= 100 && mouseX <= 200 && mouseY >= 70 && mouseY <= 130) {
-    ledState = !ledState; // Vaheta LEDi olekut (true <-> false)
-    
-    // Saadame Arduinole ühe märgi: '1' kui LED sisse, '0' kui välja
-    myPort.write(ledState ? '1' : '0');
+  boolean hiirNupuLaiuses = mouseX >= 100 && mouseX <= 200;
+  boolean hiirNupuKõrguses = mouseY >= 70 && mouseY <= 130;
+
+  if (hiirNupuLaiuses && hiirNupuKõrguses) {
+    if (ledState) {
+      ledState = false;
+      myPort.write('0'); // Lülita Arduino LED välja
+    } else {
+      ledState = true;
+      myPort.write('1'); // Lülita Arduino LED sisse
+    }
   }
 }
 ~~~
 
 ## Näide: andmed Arduinost Processingusse
 Nüüd vaatame näidet, kus DHT22 anduri abil joonistatakse õhutemperatuuri ja -niiskuse graafik. Vali taas port `Serial.list()` väljundi järgi ja sulge Arduino IDE jadamonitor.
+
+Arduino saadab ühe mõõtmise ühel real kujul `temperatuur,niiskus`, näiteks `23.5,45.2`. Processing eraldab kaks arvu komaga, hoiab viimased 300 mõõtmist loendites (`ArrayList`) ja joonistab kummagi loendi oma graafikuna. Funktsiooni `drawGraph()` kasutatakse mõlema graafiku jaoks, et sama joonistamiskoodi ei peaks kaks korda kirjutama.
 
 ### Arduino kood
 ~~~cpp
@@ -143,12 +159,14 @@ void loop() {
 
   // Kontrollime, kas väärtused on kehtivad
   if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("N/A,N/A");
-  } else { //kui väärtused on kehtivad kirjutame need jadaühenduse peale välja eraldatuna komaga
-    Serial.print(temperature);
-    Serial.print(",");
-    Serial.println(humidity);
+    // Vigast mõõtmist ei saadeta Processingule.
+    delay(1000);
+    return;
   }
+
+  Serial.print(temperature);
+  Serial.print(",");
+  Serial.println(humidity);
 
   delay(1000); // Saadame andmeid kord sekundis
 }
@@ -200,41 +218,53 @@ void drawGraph(ArrayList<Float> data, int col, String label, float yStart,
 
   for (int i = 0; i < data.size(); i++) {
     // Teisendame andmeväärtuse y-koordinaadiks (graafiku kõrguse piires)
-    float yVal = map(constrain(data.get(i), minValue, maxValue),
-                     minValue, maxValue, 160, 0);
+    float mõõdetudVäärtus = data.get(i);
+    float piiratudVäärtus = constrain(mõõdetudVäärtus, minValue, maxValue);
+    float yVal = map(piiratudVäärtus, minValue, maxValue, 160, 0);
     // Joonistame jooni andmepunktide vahel
-    vertex(i * (width / float(maxDataPoints)), yStart + yVal);
+    float x = i * (width / float(maxDataPoints));
+    float y = yStart + yVal;
+    vertex(x, y);
   }
 
   endShape(); // Lõpetame joonistamise
 
   // Näitame hetke viimast väärtust tekstina
   fill(0);
-  text(label + ": " + (data.size() > 0 ? nf(data.get(data.size()-1), 1, 1) : "…"), 10, yStart - 5);
+  if (data.size() > 0) {
+    float viimaneVäärtus = data.get(data.size() - 1);
+    String kuvatavVäärtus = nf(viimaneVäärtus, 1, 1);
+    text(label + ": " + kuvatavVäärtus, 10, yStart - 5);
+  } else {
+    text(label + ": andmed puuduvad", 10, yStart - 5);
+  }
 }
 
 // Serial sündmus – käivitatakse iga kord, kui uus rida on saadaval
 void serialEvent(Serial p) {
   inString = p.readStringUntil('\n');
-  if (inString == null) return;
-  inString = trim(inString);
+  if (inString != null) {
+    inString = trim(inString);
 
-  // Kontrollime, kas andmestring sisaldab koma – eeldame formaati "23.5,45.2"
-  if (inString != null && inString.contains(",")) {
+    // Eeldame kahe komaga eraldatud arvu, näiteks "23.5,45.2".
     String[] values = split(inString, ",");
     if (values.length == 2) {
-      try {
-        // Teisendame stringid ujukomaarvudeks
-        float t = float(values[0]);
-        float h = float(values[1]);
+      float temperatuur = float(values[0]);
+      float niiskus = float(values[1]);
 
-        // Lisame andmed listi ja eemaldame vanimad, kui neid on liiga palju
-        tempData.add(t);
-        humData.add(h);
-        if (tempData.size() > maxDataPoints) tempData.remove(0);
-        if (humData.size() > maxDataPoints) humData.remove(0);
-      } catch (Exception e) {
-        println("Andmeviga: " + inString); // Väljastame veateate, kui teisendus ebaõnnestub
+      if (Float.isNaN(temperatuur) || Float.isNaN(niiskus)) {
+        println("Andmeviga: " + inString);
+      } else {
+        tempData.add(temperatuur);
+        humData.add(niiskus);
+
+        // Hoiame graafikul kuni 300 viimast mõõtmist.
+        if (tempData.size() > maxDataPoints) {
+          tempData.remove(0);
+        }
+        if (humData.size() > maxDataPoints) {
+          humData.remove(0);
+        }
       }
     }
   }

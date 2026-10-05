@@ -46,6 +46,7 @@ Kui ülaltoodu tundub liiga keeruline, siis väiksemale probleemile lahenduse so
 ## 📎 Soovitused hea panuse tegemiseks
 
 - Kirjuta selgelt ja arusaadavalt, sobivas keeles (Eesti/inglise – vt materjali põhikeelt)
+- Kirjuta koodinäited algajale sammhaaval loetavalt: kasuta tingimustes ja tsüklites looksulge, pane üks käsk reale ning selgita uusi muutujaid ja teegi funktsioone. Väldi tingimusoperaatori lühivormi.
 - Lisa viited, kui kasutad allikaid
 - Säilita ühtne formaat ja stiil
 - Märgi vajadusel TODO või FIXME kohad kommentaarina

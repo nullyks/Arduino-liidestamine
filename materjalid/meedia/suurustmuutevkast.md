@@ -46,7 +46,9 @@ void draw() {
   // Joonista ristkülik ekraani keskele
   rectMode(CENTER);
   fill(0, 150, 255);
-  rect(width/2, height/2, rectWidth, rectHeight);
+  int keskpunktX = width / 2;
+  int keskpunktY = height / 2;
+  rect(keskpunktX, keskpunktY, rectWidth, rectHeight);
 }
 
 void serialEvent(Serial p) {
@@ -55,12 +57,16 @@ void serialEvent(Serial p) {
     data = trim(data);  // Eemalda tühikud ja \n
     String[] parts = split(data, ',');
     if (parts.length == 2) {
-      int potW = constrain(int(parts[0]), 0, 1023);
-      int potH = constrain(int(parts[1]), 0, 1023);
+      int saadudLaius = int(parts[0]);
+      int saadudKõrgus = int(parts[1]);
+      int piiratudLaius = constrain(saadudLaius, 0, 1023);
+      int piiratudKõrgus = constrain(saadudKõrgus, 0, 1023);
 
-      // Kaardista 0–1023 → 10–width või height (piirang joonistamisele)
-      rectWidth = int(map(potW, 0, 1023, 10, width - 20));
-      rectHeight = int(map(potH, 0, 1023, 10, height - 20));
+      // Kaardista potentsiomeetrite näidud akna mõõtmeteks.
+      float uusLaius = map(piiratudLaius, 0, 1023, 10, width - 20);
+      float uusKõrgus = map(piiratudKõrgus, 0, 1023, 10, height - 20);
+      rectWidth = int(uusLaius);
+      rectHeight = int(uusKõrgus);
     }
   }
 }

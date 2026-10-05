@@ -20,6 +20,8 @@ UNO R4 WiFi plaadil on USB `Serial` ja D0/D1 `Serial1` eraldi. Ühenda ühe plaa
 
 Saatja saadab ühe rea `ping` ja vastuvõtja saadab vastu ühe rea `pong`. Mõlemas programmis peab jadapordi kiirus olema 9600.
 
+Saatja jätab pärast sõnumi saatmist vastuse ootamiseks kuni ühe sekundi. `millis()` annab programmi käivitamisest möödunud aja millisekundites; `break` lõpetab ootesilmuse kohe, kui vastus on saabunud.
+
 **Saatja kood**
 
 ```cpp
@@ -39,7 +41,7 @@ void loop() {
 
   unsigned long algus = millis();
   while (millis() - algus < 1000) {
-    if (link.available()) {
+    if (link.available() > 0) {
       String vastus = link.readStringUntil('\n');
       vastus.trim();
       Serial.print("Vastus: ");
@@ -65,7 +67,7 @@ void setup() {
 }
 
 void loop() {
-  if (link.available()) {
+  if (link.available() > 0) {
     String teade = link.readStringUntil('\n');
     teade.trim();
     if (teade == "ping") {
@@ -87,8 +89,15 @@ Kasuta eelmisi kahte programmi järgmiste asendustega: eemalda `#include <Softwa
 JSON (JavaScript Object Notation) lubab ühes sõnumis saata mitu nimega väärtust. Näiteks:
 
 ```json
-{"temperatuur":21.5,"niiskus":60,"valgus":true,"asukoht":"elutuba"}
+{
+  "temperatuur": 21.5,
+  "niiskus": 60,
+  "valgus": true,
+  "asukoht": "elutuba"
+}
 ```
+
+`JsonDocument` hoiab sõnumi välju. Saatja lisab väärtused kujul `doc["temperatuur"] = temperatuur;`; vastuvõtja loeb sama välja näiteks kujul `doc["temperatuur"].as<float>()`. `as<float>()` teisendab väärtuse komakohaga arvuks.
 
 Järgmine UNO R3 näide vajab `ArduinoJson` versiooni 7 ja DHT22-anduri jaoks `DHT sensor library` teeki. Fototakisti peab olema koos sobiva takistiga pingejaguris, mille väljund on ühendatud A0-ga. `valgusePiir` sõltub pingejaguri ühendusest ja valgustingimustest; vajaduse korral muuda võrdlusmärki. Andurite näidiskoodi saab kasutada ka UNO R4 WiFi-ga, kui asendad `SoftwareSerial` eelmises jaotises kirjeldatud viisil `Serial1` objektiga.
 
@@ -113,6 +122,8 @@ void setup() {
 void loop() {
   float temperatuur = dht.readTemperature();
   float niiskus = dht.readHumidity();
+
+  // Vigase andurinäidu korral ootame enne järgmist mõõtmist.
   if (isnan(temperatuur) || isnan(niiskus)) {
     Serial.println("DHT22 lugemisviga");
     delay(2000);
@@ -122,7 +133,9 @@ void loop() {
   JsonDocument doc;
   doc["temperatuur"] = temperatuur;
   doc["niiskus"] = niiskus;
-  doc["valgus"] = analogRead(valgusViik) > valgusePiir;
+  int valguseNait = analogRead(valgusViik);
+  bool onValgus = valguseNait > valgusePiir;
+  doc["valgus"] = onValgus;
   doc["asukoht"] = "elutuba";
 
   serializeJson(doc, link);
@@ -148,22 +161,35 @@ void setup() {
 }
 
 void loop() {
-  if (!link.available()) return;
+  if (link.available() > 0) {
+    String rida = link.readStringUntil('\n');
+    JsonDocument doc;
+    DeserializationError viga = deserializeJson(doc, rida);
 
-  String rida = link.readStringUntil('\n');
-  JsonDocument doc;
-  DeserializationError viga = deserializeJson(doc, rida);
-  if (viga) {
-    Serial.print("JSON-i lugemisviga: ");
-    Serial.println(viga.c_str());
-    return;
+    if (viga) {
+      Serial.print("JSON-i lugemisviga: ");
+      Serial.println(viga.c_str());
+    } else {
+      // Võtame sõnumist iga välja eraldi muutujasse.
+      String asukoht = doc["asukoht"].as<String>();
+      float temperatuur = doc["temperatuur"].as<float>();
+      float niiskus = doc["niiskus"].as<float>();
+      bool onValgus = doc["valgus"].as<bool>();
+
+      Serial.print("Asukoht: ");
+      Serial.println(asukoht);
+      Serial.print("Temperatuur: ");
+      Serial.println(temperatuur);
+      Serial.print("Niiskus: ");
+      Serial.println(niiskus);
+      Serial.print("Valgus: ");
+      if (onValgus) {
+        Serial.println("jah");
+      } else {
+        Serial.println("ei");
+      }
+    }
   }
-
-  const char* asukoht = doc["asukoht"] | "tundmatu";
-  Serial.print("Asukoht: "); Serial.println(asukoht);
-  Serial.print("Temperatuur: "); Serial.println(doc["temperatuur"].as<float>());
-  Serial.print("Niiskus: "); Serial.println(doc["niiskus"].as<float>());
-  Serial.print("Valgus: "); Serial.println(doc["valgus"].as<bool>() ? "jah" : "ei");
 }
 ```
 
@@ -186,7 +212,9 @@ WiFiServer server(5000);
 void setup() {
   Serial.begin(9600);
   WiFi.begin(ssid, pass);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
   Serial.print("Serveri IP: ");
   Serial.println(WiFi.localIP());
   server.begin();
@@ -194,22 +222,36 @@ void setup() {
 
 void loop() {
   WiFiClient klient = server.available();
-  if (!klient) return;
+  if (klient) {
+    klient.setTimeout(1000);
+    String rida = klient.readStringUntil('\n');
+    JsonDocument doc;
+    DeserializationError viga = deserializeJson(doc, rida);
 
-  klient.setTimeout(1000);
-  String rida = klient.readStringUntil('\n');
-  JsonDocument doc;
-  DeserializationError viga = deserializeJson(doc, rida);
-  if (viga) {
-    Serial.print("JSON-i lugemisviga: ");
-    Serial.println(viga.c_str());
-  } else {
-    Serial.print("Asukoht: "); Serial.println(doc["asukoht"] | "tundmatu");
-    Serial.print("Temperatuur: "); Serial.println(doc["temperatuur"].as<float>());
-    Serial.print("Niiskus: "); Serial.println(doc["niiskus"].as<float>());
-    Serial.print("Valgus: "); Serial.println(doc["valgus"].as<bool>() ? "jah" : "ei");
+    if (viga) {
+      Serial.print("JSON-i lugemisviga: ");
+      Serial.println(viga.c_str());
+    } else {
+      String asukoht = doc["asukoht"].as<String>();
+      float temperatuur = doc["temperatuur"].as<float>();
+      float niiskus = doc["niiskus"].as<float>();
+      bool onValgus = doc["valgus"].as<bool>();
+
+      Serial.print("Asukoht: ");
+      Serial.println(asukoht);
+      Serial.print("Temperatuur: ");
+      Serial.println(temperatuur);
+      Serial.print("Niiskus: ");
+      Serial.println(niiskus);
+      Serial.print("Valgus: ");
+      if (onValgus) {
+        Serial.println("jah");
+      } else {
+        Serial.println("ei");
+      }
+    }
+    klient.stop();
   }
-  klient.stop();
 }
 ```
 
@@ -230,7 +272,9 @@ void setup() {
   Serial.begin(9600);
   dht.begin();
   WiFi.begin(ssid, pass);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
 }
 
 void loop() {
@@ -245,7 +289,9 @@ void loop() {
   JsonDocument doc;
   doc["temperatuur"] = temperatuur;
   doc["niiskus"] = niiskus;
-  doc["valgus"] = analogRead(A0) > 500;
+  int valguseNait = analogRead(A0);
+  bool onValgus = valguseNait > 500;
+  doc["valgus"] = onValgus;
   doc["asukoht"] = "elutuba";
 
   WiFiClient klient;
