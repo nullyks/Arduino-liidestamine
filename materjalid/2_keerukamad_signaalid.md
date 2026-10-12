@@ -82,7 +82,86 @@ void loop() {
 
 ### Sama näide UNO R4 WiFi-ga
 
-Kasuta eelmisi kahte programmi järgmiste asendustega: eemalda `#include <SoftwareSerial.h>` ja `SoftwareSerial link(10, 11);` ning asenda kõik `link` nimelise objekti kasutused `Serial1` objektiga. Näiteks saab `link.begin(9600)` asemele `Serial1.begin(9600)` ja `link.setTimeout(200)` asemele `Serial1.setTimeout(200)`. Ülejäänud loogika jääb samaks. USB-jadamonitor kasutab endiselt `Serial` objekti.
+Kahe UNO R4 WiFi plaadiga saab teha sama katse: üks plaat saadab sõnumi `ping` ja teine vastab sõnumiga `pong`. Selles näites liiguvad andmed juhtmete kaudu. Plaatide WiFi-ühendust ei kasutata.
+
+**Miks erineb ühendus UNO R3 näitest?**
+
+UNO R3 plaadil kasutavad USB kaudu arvutiga suhtlemine ja viigud D0/D1 sama riistvaralist UART-jadaliidest. Kui ühendada teine Arduino nende viikude külge, võib selle andmevahetus häirida programmi üleslaadimist ja jadamonitori kasutamist. Seepärast lõime R3 näites `SoftwareSerial` teegiga täiendava tarkvaralise jadaliidese viikudele D10 ja D11.
+
+UNO R4 WiFi plaadil on USB kaudu arvutiga suhtlemine ja viikude D0/D1 riistvaraline UART-jadaliides eraldi. Neid kasutatakse programmis kahe erineva objektiga:
+
+* `Serial` suhtleb USB kaudu arvutiga. Selle abil kuvame jadamonitoris saadetud sõnumid ja saabunud vastused.
+* `Serial1` suhtleb teise Arduinoga viikude D0 (RX ehk vastuvõtt) ja D1 (TX ehk saatmine) kaudu.
+
+Seetõttu pole R4 näites vaja `SoftwareSerial` teeki ega `link` objekti loomist. `Serial1` on plaadi jaoks juba olemas ning kasutab riistvaralist jadaliidest. Pane tähele, et R3 näite D10/D11 juhtmed tuleb siin ühendada D0/D1 külge. Lisateavet leiab [Arduino UNO R4 WiFi ametlikust juhendist](https://docs.arduino.cc/tutorials/uno-r4-wifi/cheat-sheet/).
+
+**Plaatide ühendamine ja katse käivitamine**
+
+Enne juhtmete ühendamist lülita mõlema plaadi toide välja. Ühenda plaadid järgmiselt:
+
+| Saatja UNO R4 WiFi | Vastuvõtja UNO R4 WiFi |
+|---|---|
+| D1 (TX) | D0 (RX) |
+| D0 (RX) | D1 (TX) |
+| GND | GND |
+
+Saatja väljund ühendatakse vastuvõtja sisendiga ja vastupidi, et sõnumid saaksid liikuda mõlemas suunas. Ühine GND annab signaalidele ühise võrdlustaseme.
+
+Vali Arduino IDE-s plaadiks **Arduino UNO R4 WiFi**. Laadi ühele plaadile allolev saatja programm ja teisele vastuvõtja programm. Mõlemas programmis käivitab `Serial1.begin(9600)` plaatidevahelise ühenduse kiirusega 9600 baudi. Ava vastava plaadi USB-pordi jadamonitor ja vali ka seal kiiruseks 9600.
+
+**Saatja kood**
+
+```cpp
+void setup() {
+  Serial.begin(9600);  // USB-ühendus arvuti jadamonitoriga
+  Serial1.begin(9600); // Ühendus teise Arduinoga: RX = D0, TX = D1
+  Serial1.setTimeout(200); // Ühe rea lugemise ooteaeg millisekundites
+}
+
+void loop() {
+  Serial1.println("ping"); // Saadame teisele plaadile ühe rea.
+  Serial.println("Saadetud: ping");
+
+  // Ootame vastuse saabumist kuni ühe sekundi.
+  unsigned long algus = millis();
+  while (millis() - algus < 1000) {
+    if (Serial1.available() > 0) {
+      String vastus = Serial1.readStringUntil('\n');
+      vastus.trim(); // Eemaldame realõpu ja ümbritsevad tühikud.
+      Serial.print("Vastus: ");
+      Serial.println(vastus);
+      break; // Vastus on käes, lõpetame ootamise.
+    }
+  }
+  delay(1000); // Paus enne järgmist sõnumit
+}
+```
+
+**Vastuvõtja kood**
+
+```cpp
+void setup() {
+  Serial.begin(9600);  // USB-ühendus arvuti jadamonitoriga
+  Serial1.begin(9600); // Ühendus teise Arduinoga: RX = D0, TX = D1
+  Serial1.setTimeout(200); // Ühe rea lugemise ooteaeg millisekundites
+}
+
+void loop() {
+  if (Serial1.available() > 0) {
+    String teade = Serial1.readStringUntil('\n');
+    teade.trim(); // Eemaldame realõpu ja ümbritsevad tühikud.
+
+    if (teade == "ping") {
+      Serial1.println("pong"); // Saadame vastuse esimesele plaadile.
+      Serial.println("Saadetud: pong");
+    }
+  }
+}
+```
+
+`Serial1.println()` lisab sõnumi lõppu realõpu. `Serial1.readStringUntil('\n')` loeb saabunud märgid kuni reavahetuseni ja `trim()` eemaldab teksti ümbert tühimärgid, sealhulgas alles jäänud `\r` märgi. Nii saab vastuvõtja võrrelda saabunud teksti sõnega `"ping"`.
+
+Saatja jadamonitoris peaksid korduma read `Saadetud: ping` ja `Vastus: pong`. Vastuvõtja jadamonitoris kuvatakse iga vastuse saatmisel `Saadetud: pong`. Kui vastust ei tule, kontrolli esmalt TX- ja RX-juhtmete ristühendust, ühist GND-d ning seda, et mõlemad programmid kasutaksid sama `Serial1` edastuskiirust.
 
 ## JSON-vormingus andmesõnumid
 
